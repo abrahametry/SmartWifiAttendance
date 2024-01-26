@@ -1,0 +1,351 @@
+#include <WiFiManager.h>
+
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+#include <WiFi.h>
+#include <HTTPClient.h>
+const char* ssid = "WHITE TIGER";
+const char* password = "Hridoy031!";
+
+// Define the pin to which the button is connected
+const int buttonPin = 35; // Change this to your desired pin number
+
+// Variables
+int buttonState = 0;     // Current state of the button
+int lastButtonState = 0; // Previous state of the button
+
+bool control = false;
+
+
+
+// Function to replace spaces with underscores in a string
+void replaceSpacesWithUnderscores(String str) {
+  for (int i = 0; i < str.length(); i++) {
+    if (str[i] == ' ') {
+      str[i] = '_';
+    }
+  }
+}
+
+
+void setup() {
+  Serial.begin(115200);
+  WiFi.mode(WIFI_OFF);
+  delay(1000);
+  WiFi.mode(WIFI_STA);
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for (;;);
+  }
+
+
+
+  pinMode(23, INPUT_PULLUP);
+  pinMode(buttonPin, INPUT);
+  // WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
+  // it is a good practice to make sure your code sets wifi mode how you want it.
+
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+
+  //WiFiManager, Local intialization. Once its business is done, there is no need to keep it around
+  WiFiManager wm;
+
+  bool res;
+  res = wm.autoConnect("Set WiFi-Pass", ""); // password protected ap
+
+  Serial.println("Connecting to WiFi...");
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(0, 10);
+  display.println("Connecting to WiFi...");
+  display.display();
+
+  if (!res) {
+    Serial.println("Failed to connect");
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 10);
+    display.println("Failed to connect !");
+    display.display();
+    // ESP.restart();
+  }
+  else {
+    //if you get here you have connected to the WiFi
+    Serial.println("connected...yeey :)");
+    Serial.println("Connected to WiFi");
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    display.setCursor(0, 10);
+    display.println("Connected to WiFi");
+    display.display();
+  }
+
+
+
+
+
+
+  //  WiFi.begin(ssid, password);
+  //  while (WiFi.status() != WL_CONNECTED) {
+  //    delay(1000);
+  //    Serial.println("Connecting to WiFi...");
+  //    display.clearDisplay();
+  //    display.setTextSize(1);
+  //    display.setTextColor(WHITE);
+  //    display.setCursor(0, 10);
+  //    display.println("Connecting to WiFi...");
+  //    display.display();
+  //  }
+  //
+  //  Serial.println("Connected to WiFi");
+  //  display.clearDisplay();
+  //  display.setTextSize(1);
+  //  display.setTextColor(WHITE);
+  //  display.setCursor(0, 10);
+  //  display.println("Connected to WiFi");
+  //  display.display();
+  //
+  //  pinMode(buttonPin, INPUT);
+
+  delay(2000);
+
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(70, 55);
+  display.println("Active");
+  display.display();
+
+  delay(2000);
+}
+
+void loop() {
+
+
+  if (digitalRead(23) == LOW) {
+    WiFiManager wm;
+    wm.resetSettings();
+    Serial.println("Remove");
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    display.setCursor(50, 55);
+    display.println("Set New WiFi");
+    display.display();
+    delay(2000);
+   // ESP.restart();
+  }
+
+
+  // Read the current state of the button
+  buttonState = digitalRead(buttonPin);
+
+  // Check if the button has been pressed (transition from HIGH to LOW)
+    if (buttonState == HIGH) {
+      Serial.println("Yes");
+      // Increment the count
+      interruptHandler();
+      delay(2000);
+    }
+
+
+
+  if (WiFi.status() == WL_CONNECTED) {
+    //HTTPClient http;
+
+
+    // Scan for nearby Wi-Fi networks
+    int networksFound = WiFi.scanNetworks();
+
+    for (int i = 0; i < networksFound; i++) {
+      String post_data = "";
+      String macAdd;
+      String net;
+
+      post_data += "Network=" + WiFi.SSID(i) + "\n";
+      post_data += macToString(WiFi.BSSID(i)) + "\n";
+
+      net = WiFi.SSID(i);
+      //String macDis = macToString(WiFi.BSSID(i));
+      macAdd = macToString(WiFi.BSSID(i));
+
+      Serial.print("ssid: ");
+      Serial.println(net);
+
+      Serial.print("mac: ");
+      Serial.println(macAdd);
+
+      String str = net;
+
+      for (int i = 0; i < str.length(); i++) {
+        if (str[i] == ' ') {
+          str[i] = '_';
+        }
+      }
+      Serial.println(str);
+
+      
+        Serial.println("True");
+        // all_post_data += post_data;
+        //Serial.println(post_data);
+        //digitalWrite(buttonOneLed, LOW);
+        display.clearDisplay();
+        display.setTextSize(1);
+        display.setTextColor(WHITE);
+        display.setCursor(5, 10);
+        display.println(net);
+        display.setCursor(5, 25);
+        display.println(macAdd);
+
+        display.setCursor(65, 55);
+        display.println("Inspection");
+        display.display();
+
+        HTTPClient http;
+        http.begin("http://192.168.0.111/macAddress/scanphp.php?ssid=" + str + "&mac=" + macAdd); // Specify the URL here
+        http.GET();
+        // String payload = http.getString();
+        // Serial.println(payload);
+        http.end();
+        delay(2000);
+       
+
+        //digitalWrite(buttonOneLed, HIGH);
+        display.clearDisplay();
+        display.setTextSize(1);
+        display.setTextColor(WHITE);
+        display.setCursor(5, 0);
+        display.println("Scanning...");
+        display.setCursor(75, 55);
+        display.println("Active");
+        display.display();
+
+
+        HTTPClient http;
+        http.begin("http://192.168.0.111/macAddress/check-mac.php?mac=" + macAdd); // Specify the URL here
+        http.GET();
+        String payload = http.getString();
+        Serial.println(payload);
+        http.end();
+
+        int payTrim = payload.length();
+        Serial.println(payTrim);
+
+        if (payTrim > 0) {
+          Serial.println("Got Value");
+          display.clearDisplay();
+          display.setTextSize(1);
+          display.setTextColor(WHITE);
+          display.setCursor(5, 0);
+          display.println("Scanning...");
+          display.setCursor(5, 25);
+          display.println(payload);
+          display.setCursor(75, 55);
+          display.println("Set New WiFi");
+          display.display();
+          delay(2000);
+        }
+
+        delay(500);
+      
+    }
+  } else {
+    Serial.println("WiFi not connected");
+  }
+  delay(100); // Wait for 5 seconds before sending the next request
+}
+
+
+
+
+
+
+String macToString(const uint8_t* mac) {
+  String result;
+  for (int i = 0; i < 6; ++i) {
+    result += String(mac[i], HEX);
+    if (i < 5) {
+      result += ":";
+    }
+  }
+  return result;
+}
+
+String encryptionTypeToString(uint8_t encryptionType) {
+  switch (encryptionType) {
+    case WIFI_AUTH_OPEN:
+      return "Open";
+    case WIFI_AUTH_WEP:
+      return "WEP";
+    case WIFI_AUTH_WPA_PSK:
+      return "WPA_PSK";
+    case WIFI_AUTH_WPA2_PSK:
+      return "WPA2_PSK";
+    case WIFI_AUTH_WPA_WPA2_PSK:
+      return "WPA_WPA2_PSK";
+    case WIFI_AUTH_WPA2_ENTERPRISE:
+      return "WPA2_ENTERPRISE";
+    default:
+      return "Unknown";
+  }
+}
+
+
+void interruptHandler() {
+
+  if (control == true) {
+    //digitalWrite(buttonOneLed, LOW);
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    display.setCursor(65, 55);
+    display.println("Inspection");
+    display.display();
+    Serial.println("false");
+    control = false;
+  } else {
+    //digitalWrite(buttonOneLed, HIGH);
+    display.clearDisplay();
+    display.setTextSize(1);
+    display.setTextColor(WHITE);
+    display.setCursor(75, 55);
+    display.println("Active");
+    display.display();
+    Serial.println("true");
+    control = true;
+  }
+
+}
+
+
+
+// Function to trim leading and trailing whitespace from a string
+String trim(String str) {
+  // Find the first non-whitespace character from the beginning
+  int startIdx = 0;
+  while (startIdx < str.length() && isspace(str.charAt(startIdx))) {
+    startIdx++;
+  }
+
+  // Find the first non-whitespace character from the end
+  int endIdx = str.length() - 1;
+  while (endIdx >= 0 && isspace(str.charAt(endIdx))) {
+    endIdx--;
+  }
+
+  // Extract the trimmed substring
+  if (endIdx >= startIdx) {
+    return str.substring(startIdx, endIdx + 1);
+  } else {
+    return "";
+  }
+}
